@@ -12,17 +12,17 @@ This crate allows convenient `LD_PRELOAD`-style hooking of functions.
 
 2. Go into `examples/yesterday` and type:
 
-    $ cargo build
+       $ cargo build
 
 3. Check the current date:
 
-    $ /bin/bash -c "date"
-    Tue Apr 25 18:19:57 CEST 2017
+       $ /bin/bash -c "date"
+       Tue Apr 25 18:19:57 CEST 2017
 
 4. Check the date again:
 
-    $ LD_PRELOAD=./target/debug/libyesterday.so /bin/bash -c "date"
-    Mon Apr 24 18:20:25 CEST 2017
+       $ LD_PRELOAD=./target/debug/libyesterday.so /bin/bash -c "date"
+       Mon Apr 24 18:20:25 CEST 2017
 
 It seems like we went back in time!
 
