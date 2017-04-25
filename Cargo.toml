@@ -1,0 +1,23 @@
+[package]
+name = "hooky"
+version = "0.1.0"
+authors = ["Jan Bujak <j@exia.io>"]
+build = "build.rs"
+repository = "https://github.com/koute/hooky"
+homepage = "https://github.com/koute/hooky"
+documentation = "https://docs.rs/hooky/*/hooky/"
+license = "MIT/Apache-2.0"
+readme = "README.md"
+keywords = ["LD_PRELOAD", "hooking"]
+description = "Convenient LD_PRELOAD hooker"
+
+[dependencies]
+libc = "0.2"
+parking_lot = { version = "0.3", optional = true }
+
+[build-dependencies]
+gcc = "0.3"
+
+[features]
+default = []
+use_parking_lot = ["parking_lot"]
