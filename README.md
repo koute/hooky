@@ -1,5 +1,3 @@
-[![Build Status](https://api.travis-ci.org/koute/hooky.svg)](https://travis-ci.org/koute/hooky)
-
 # Hooky - an LD_PRELOAD hooker
 
 [![Documentation](https://docs.rs/hooky/badge.svg)](https://docs.rs/hooky/*/hooky/)
@@ -8,18 +6,16 @@ This crate allows convenient `LD_PRELOAD`-style hooking of functions.
 
 ## Getting started
 
-1. Make sure you're using Rust nightly.
-
-2. Go into `examples/yesterday` and type:
+1. Go into `examples/yesterday` and type:
 
        $ cargo build
 
-3. Check the current date:
+2. Check the current date:
 
        $ /bin/bash -c "date"
        Tue Apr 25 18:19:57 CEST 2017
 
-4. Check the date again:
+3. Check the date again:
 
        $ LD_PRELOAD=./target/debug/libyesterday.so /bin/bash -c "date"
        Mon Apr 24 18:20:25 CEST 2017
