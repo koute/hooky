@@ -10,6 +10,7 @@ license = "MIT/Apache-2.0"
 readme = "README.md"
 keywords = ["LD_PRELOAD", "hooking"]
 description = "Convenient LD_PRELOAD hooker"
+edition = "2018"
 
 [dependencies]
 libc = "0.2"
