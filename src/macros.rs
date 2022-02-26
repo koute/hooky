@@ -177,21 +177,7 @@ macro_rules! __define_hook {
                 hooky_private::dlsym_wrapper( ptr::null_mut(), symbol.as_ptr(), ptr::null() )
             }
         }
-
-        // We don't use any symbols from libdl.so directly
-        // so there is no guarantee that the dynamic linker
-        // will actually load it if the application we're
-        // attaching to doesn't use libdl.so itself.
-        //
-        // This will force the dynamic linker to load libdl.so
-        // even if it'll seem like nothing uses it.
-        //
-        // Unfortunately this works only in the crate which will
-        // get compiled into a .so file, so we need to put this
-        // here in this macro.
-        #[link_args = "-Wl,--no-as-needed -ldl -Wl,--as-needed"]
-        extern {}
-    };
+    }
 }
 
 #[macro_export]
