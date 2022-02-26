@@ -7,6 +7,7 @@ mod macros;
 
 mod common;
 mod dl;
+mod elf;
 
 pub use common::{
     are_hooks_enabled,

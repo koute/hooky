@@ -1,30 +1,39 @@
-use libc::{
-    c_void,
-    c_char
-};
-
-extern {
-    fn hooky_load_symbol( library_name: *const c_char, symbol: *const c_char ) -> *mut c_void;
-}
+use crate::elf::ObjectInfo;
+use std::ops::ControlFlow;
+use libc::c_void;
 
 pub unsafe fn initialize_dlsym() -> *mut c_void {
-    let mut p = hooky_load_symbol( b"*libdl.so*\0".as_ptr() as *const c_char, b"dlsym\0".as_ptr() as *const c_char );
-    if p.is_null() {
-        p = hooky_load_symbol( b"*libc.so*\0".as_ptr() as *const c_char, b"dlsym\0".as_ptr() as *const c_char );
-    }
+    ObjectInfo::each( |info| {
+        if info.name_contains( "libdl.so" ) || info.name_contains( "libc.so" ) {
+            if let Some( pointer ) = info.dlsym( "dlsym" ) {
+                return ControlFlow::Break( pointer )
+            }
+        }
 
-    p
+        ControlFlow::Continue(())
+    }).unwrap_or( std::ptr::null_mut() )
 }
 
 pub unsafe fn initialize_dlvsym() -> *mut c_void {
-    let mut p = hooky_load_symbol( b"*libdl.so*\0".as_ptr() as *const c_char, b"dlvsym\0".as_ptr() as *const c_char );
-    if p.is_null() {
-        p = hooky_load_symbol( b"*libc.so*\0".as_ptr() as *const c_char, b"dlvsym\0".as_ptr() as *const c_char );
-    }
+    ObjectInfo::each( |info| {
+        if info.name_contains( "libdl.so" ) || info.name_contains( "libc.so" ) {
+            if let Some( pointer ) = info.dlsym( "dlvsym" ) {
+                return ControlFlow::Break( pointer )
+            }
+        }
 
-    p
+        ControlFlow::Continue(())
+    }).unwrap_or( std::ptr::null_mut() )
 }
 
 pub unsafe fn initialize_libc_dlsym() -> *mut c_void {
-    hooky_load_symbol( b"*libc.so*\0".as_ptr() as *const c_char, b"__libc_dlsym\0".as_ptr() as *const c_char )
+    ObjectInfo::each( |info| {
+        if info.name_contains( "libc.so" ) {
+            if let Some( pointer ) = info.dlsym( "__libc_dlsym" ) {
+                return ControlFlow::Break( pointer )
+            }
+        }
+
+        ControlFlow::Continue(())
+    }).unwrap_or( std::ptr::null_mut() )
 }

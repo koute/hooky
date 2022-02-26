@@ -2,7 +2,6 @@
 name = "hooky"
 version = "0.1.0"
 authors = ["Jan Bujak <j@exia.io>"]
-build = "build.rs"
 repository = "https://github.com/koute/hooky"
 homepage = "https://github.com/koute/hooky"
 documentation = "https://docs.rs/hooky/*/hooky/"
@@ -14,9 +13,6 @@ edition = "2018"
 
 [dependencies]
 libc = "0.2"
-
-[build-dependencies]
-cc = "1"
 
 [features]
 default = []
