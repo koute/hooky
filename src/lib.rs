@@ -4,9 +4,6 @@
 
 extern crate libc;
 
-#[cfg(feature = "use_parking_lot")]
-extern crate parking_lot;
-
 #[macro_use]
 mod macros;
 

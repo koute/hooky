@@ -11,4 +11,3 @@ libc = "0.2"
 
 [dependencies.hooky]
 path = "../.."
-features = ["use_parking_lot"]

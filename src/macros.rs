@@ -12,20 +12,53 @@ macro_rules! __define_hook {
             pub unsafe fn $name( $( $arg_name : $arg_type ),* ) -> $return_type {
                 use std::{mem, ptr};
 
-                #[cfg(not(feature = "use_parking_lot"))]
-                use std::sync::{Once, ONCE_INIT};
+                const UNINITIALIZED: u8 = 0;
+                const INITIALIZING: u8 = 1;
+                const PANICKED: u8 = 2;
+                const DONE: u8 = 3;
 
-                #[cfg(feature = "use_parking_lot")]
-                use $crate::parking_lot::{Once, ONCE_INIT};
+                static INIT: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new( UNINITIALIZED );
 
-                static INIT: Once = ONCE_INIT;
-                INIT.call_once( || {
-                    *raw::$name() = $initializer;
-                });
+                #[inline(never)]
+                #[cold]
+                fn init() {
+                    if INIT.compare_exchange( UNINITIALIZED, INITIALIZING, std::sync::atomic::Ordering::Acquire, std::sync::atomic::Ordering::Acquire ).is_ok() {
+                        unsafe {
+                            let result = std::panic::catch_unwind(|| {
+                                let pointer = $initializer;
+                                assert!( pointer != ptr::null_mut() );
+                                assert!( pointer != $name as *mut $crate::private::c_void );
+
+                                *raw::$name() = pointer;
+                            });
+                            match result {
+                                Ok(()) => {
+                                    INIT.store(DONE, std::sync::atomic::Ordering::Release);
+                                },
+                                Err( error ) => {
+                                    INIT.store(PANICKED, std::sync::atomic::Ordering::Release);
+                                    std::panic::resume_unwind( error );
+                                }
+                            }
+                        }
+                    }
+
+                    loop {
+                        let status = INIT.load( std::sync::atomic::Ordering::Acquire );
+                        match status {
+                            INITIALIZING => std::thread::yield_now(),
+                            PANICKED => panic!(),
+                            DONE => break,
+                            _ => unsafe { std::hint::unreachable_unchecked() }
+                        }
+                    }
+                }
+
+                if INIT.load( std::sync::atomic::Ordering::Acquire ) != DONE {
+                    init();
+                }
 
                 let pointer: *mut $crate::private::c_void = *raw::$name();
-                assert!( pointer != ptr::null_mut() );
-                assert!( pointer != $name as *mut $crate::private::c_void );
                 let ptr: extern "C" fn( $( $arg_type ),* ) -> $return_type = mem::transmute( pointer );
                 ( ptr )( $( $arg_name ),* )
             }
