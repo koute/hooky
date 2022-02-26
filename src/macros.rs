@@ -10,8 +10,6 @@ macro_rules! __define_hook {
             #[allow(dead_code)]
             #[allow(non_snake_case)]
             pub unsafe fn $name( $( $arg_name : $arg_type ),* ) -> $return_type {
-                use std::{mem, ptr};
-
                 const UNINITIALIZED: u8 = 0;
                 const INITIALIZING: u8 = 1;
                 const PANICKED: u8 = 2;
@@ -26,7 +24,7 @@ macro_rules! __define_hook {
                         unsafe {
                             let result = std::panic::catch_unwind(|| {
                                 let pointer = $initializer;
-                                assert!( pointer != ptr::null_mut() );
+                                assert!( pointer != std::ptr::null_mut() );
                                 assert!( pointer != $name as *mut $crate::private::c_void );
 
                                 *raw::$name() = pointer;
@@ -59,7 +57,7 @@ macro_rules! __define_hook {
                 }
 
                 let pointer: *mut $crate::private::c_void = *raw::$name();
-                let ptr: extern "C" fn( $( $arg_type ),* ) -> $return_type = mem::transmute( pointer );
+                let ptr: extern "C" fn( $( $arg_type ),* ) -> $return_type = std::mem::transmute( pointer );
                 ( ptr )( $( $arg_name ),* )
             }
         }
@@ -98,14 +96,14 @@ macro_rules! __define_hook {
         #[initializer($initializer:path)]
         unsafe fn $name:ident( $( $arg_name:ident : $arg_type:ty ),* ) -> $return_type:ty $body:block $($rest:tt)*
     ) => {
-        __define_hook! {
+        $crate::__define_hook! {
             @define_hook {
                 $initializer()
             }
             unsafe fn $name( $( $arg_name : $arg_type ),* ) -> $return_type $body
         }
 
-        __define_hook! {
+        $crate::__define_hook! {
             @name_list [$name $($name_list)*]
             $($rest)*
         }
@@ -116,12 +114,10 @@ macro_rules! __define_hook {
         #[source($so_name:expr)]
         unsafe fn $name:ident( $( $arg_name:ident : $arg_type:ty ),* ) -> $return_type:ty $body:block $($rest:tt)*
     ) => {
-        __define_hook! {
+        $crate::__define_hook! {
             @define_hook {
-                use std::ffi::CStr;
-
-                let symbol_cstr = CStr::from_bytes_with_nul_unchecked( concat!( stringify!( $name ), "\0" ).as_bytes() );
-                let so_cstr = CStr::from_bytes_with_nul_unchecked( concat!( $so_name, "\0" ).as_bytes() );
+                let symbol_cstr = std::ffi::CStr::from_bytes_with_nul_unchecked( concat!( stringify!( $name ), "\0" ).as_bytes() );
+                let so_cstr = std::ffi::CStr::from_bytes_with_nul_unchecked( concat!( $so_name, "\0" ).as_bytes() );
                 let mut so_handle = libc::dlopen( so_cstr.as_ptr(), libc::RTLD_GLOBAL | libc::RTLD_NOW | libc::RTLD_NOLOAD );
                 if so_handle.is_null() {
                     so_handle = libc::dlopen( so_cstr.as_ptr(), libc::RTLD_GLOBAL | libc::RTLD_NOW );
@@ -138,7 +134,7 @@ macro_rules! __define_hook {
             unsafe fn $name( $( $arg_name : $arg_type ),* ) -> $return_type $body
         }
 
-        __define_hook! {
+        $crate::__define_hook! {
             @name_list [$name $($name_list)*]
             $($rest)*
         }
@@ -148,11 +144,9 @@ macro_rules! __define_hook {
         @name_list [$($name_list:ident)*]
         unsafe fn $name:ident( $( $arg_name:ident : $arg_type:ty ),* ) -> $return_type:ty $body:block $($rest:tt)*
     ) => {
-        __define_hook! {
+        $crate::__define_hook! {
             @define_hook {
-                use std::ffi::CStr;
-
-                let symbol_cstr = CStr::from_bytes_with_nul_unchecked( concat!( stringify!( $name ), "\0" ).as_bytes() );
+                let symbol_cstr = std::ffi::CStr::from_bytes_with_nul_unchecked( concat!( stringify!( $name ), "\0" ).as_bytes() );
                 let handle = real::dlsym( libc::RTLD_NEXT, symbol_cstr.as_ptr() );
                 if handle.is_null() {
                     panic!( concat!( "Symbol ", stringify!( $name ), " not found" ) );
@@ -162,7 +156,7 @@ macro_rules! __define_hook {
             unsafe fn $name( $( $arg_name : $arg_type ),* ) -> $return_type $body
         }
 
-        __define_hook! {
+        $crate::__define_hook! {
             @name_list [$name $($name_list)*]
             $($rest)*
         }
@@ -184,13 +178,11 @@ macro_rules! __define_hook {
                 symbol: *const $crate::private::c_char,
                 _version: *const $crate::private::c_char
             ) -> Option< *mut $crate::private::c_void > {
-                use std::ffi::CStr;
-
                 if symbol.is_null() {
                     return None;
                 }
 
-                let symbol = CStr::from_ptr( symbol );
+                let symbol = std::ffi::CStr::from_ptr( symbol );
                 let symbol = symbol.to_bytes();
                 $(
                     if symbol == stringify!( $name ).as_bytes() {
@@ -205,9 +197,8 @@ macro_rules! __define_hook {
         #[allow(dead_code)]
         #[inline]
         fn hooky_get_symbol( symbol: &::std::ffi::CStr ) -> Option< *mut $crate::private::c_void > {
-            use std::ptr;
             unsafe {
-                hooky_private::dlsym_wrapper( ptr::null_mut(), symbol.as_ptr(), ptr::null() )
+                hooky_private::dlsym_wrapper( std::ptr::null_mut(), symbol.as_ptr(), std::ptr::null() )
             }
         }
     }
@@ -218,14 +209,13 @@ macro_rules! define_hook {
     (
         $($rest:tt)*
     ) => {
-        __define_hook! {
+        $crate::__define_hook! {
             @name_list []
 
             #[initializer($crate::private::initialize_dlsym)]
             unsafe fn dlsym( handle: *mut $crate::private::c_void, symbol: *const $crate::private::c_char ) -> *mut $crate::private::c_void {
-                use std::ptr;
                 unsafe {
-                    hooky_private::dlsym_wrapper( handle, symbol, ptr::null() ).unwrap_or_else( || real::dlsym( handle, symbol ) )
+                    hooky_private::dlsym_wrapper( handle, symbol, std::ptr::null() ).unwrap_or_else( || real::dlsym( handle, symbol ) )
                 }
             }
 
@@ -238,9 +228,8 @@ macro_rules! define_hook {
 
             #[initializer($crate::private::initialize_libc_dlsym)]
             unsafe fn __libc_dlsym( handle: *mut $crate::private::c_void, symbol: *const $crate::private::c_char ) -> *mut $crate::private::c_void {
-                use std::ptr;
                 unsafe {
-                    hooky_private::dlsym_wrapper( handle, symbol, ptr::null() ).unwrap_or_else( || real::__libc_dlsym( handle, symbol ) )
+                    hooky_private::dlsym_wrapper( handle, symbol, std::ptr::null() ).unwrap_or_else( || real::__libc_dlsym( handle, symbol ) )
                 }
             }
 

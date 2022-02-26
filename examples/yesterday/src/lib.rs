@@ -1,10 +1,5 @@
-extern crate libc;
-
-#[macro_use]
-extern crate hooky;
-
 #[cfg(not(test))]
-define_hook! {
+hooky::define_hook! {
     unsafe fn clock_gettime( id: libc::clockid_t, ts: *mut libc::timespec ) -> libc::c_int {
         unsafe {
             let result = real::clock_gettime( id, ts );
